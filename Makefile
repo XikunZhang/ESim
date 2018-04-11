@@ -1,12 +1,13 @@
 CC = g++
 CFLAGS = -lm -pthread -Ofast -march=native -Wall -funroll-loops -Wno-unused-result -lgsl -lm -lgslcblas
 LFLAGS = -lgsl -lm -lgslcblas
-INCLUDES = -I/usr/local/include -Ieigen-3.3.3
-LIBS = -L/usr/local/lib
+INCLUDES = -I/usr/local/include -Ieigen-3.3.3 -I/home/xikunz2/gsl/include
+LIBS = -L/usr/local/lib -L/home/xikunz2/gsl/lib
+
 
 BIN = bin/esim bin/search
 
-all: bin $(BIN)
+all: eigen-3.3.3 bin $(BIN)
 
 eigen-3.3.3:
 	curl https://bitbucket.org/eigen/eigen/get/3.3.3.tar.bz2  --output eigen-3.3.3.tar.gz

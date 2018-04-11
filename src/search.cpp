@@ -15,11 +15,29 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <malloc.h>
+//#include <malloc.h>
+#include <stdlib.h>
+#include <iostream>
+#include <fstream>
+#include <string>
 
 const long long max_size = 2000;         // max length of strings
 const long long N = 40;                  // number of closest words that will be shown
 const long long max_w = 50;              // max length of vocabulary entries
+
+char* replace(char* str, char* a, char* b)
+{
+    int len  = strlen(str);
+    int lena = strlen(a), lenb = strlen(b);
+    for (char* p = str; (p = strstr(p, a)) != NULL; ++p) {
+        if (lena != lenb) // shift end as needed
+            memmove(p+lenb, p+lena,
+                len - (p - str) + lenb);
+        memcpy(p, b, lenb);
+    }
+    return str;
+}
+
 
 int main(int argc, char **argv) {
 	FILE *f;
@@ -51,6 +69,13 @@ int main(int argc, char **argv) {
 	}
 	for (b = 0; b < words; b++) {
 		fscanf(f, "%s%c", &vocab[b * max_w], &ch);
+		// if( b >= 20500 && b <= 20553 ){
+		//
+		// 	printf("%s\n", &vocab[b * max_w]);
+		// }
+		if(ch == 'p'){
+			printf("p!!!!\n");
+		}
 		for (a = 0; a < size; a++) fread(&M[a + b * size], sizeof(float), 1, f);
 		len = 0;
 		for (a = 0; a < size; a++) len += M[a + b * size] * M[a + b * size];
@@ -58,78 +83,112 @@ int main(int argc, char **argv) {
 		for (a = 0; a < size; a++) M[a + b * size] /= len;
 	}
 	fclose(f);
-	while (1) {
-		for (a = 0; a < N; a++) bestd[a] = 0;
-		for (a = 0; a < N; a++) bestw[a][0] = 0;
-		printf("Enter word or sentence (EXIT to break): ");
-		a = 0;
-		while (1) {
-			st1[a] = fgetc(stdin);
-			if ((st1[a] == '\n') || (a >= max_size - 1)) {
-				st1[a] = 0;
-				break;
-			}
-			a++;
+	// The following codes are added for outputing node representations
+	printf("Outputting word embedding file\n");
+	std::ofstream output;
+	char temp[max_size];
+	output.open (replace(file_name, "dat", "txt"),std::ios::out | std::ios::binary);
+	for (c = 0; c < words; c++) {
+		temp[0] = 0;
+		strcpy(temp, &vocab[c * max_w]);
+		std::string strtmp(temp);
+		// if(strtmp.at(0) == 'u'){
+		// 	output << strtmp << ",";
+		// 	for (a = 0; a < size; a++){
+		// 		output << M[a+c*size];
+		// 		if(a != size-1) output << ",";
+		// 	}
+		// 	output << "\n";
+		// }
+//		if(strtmp.length() > 4 && strtmp.length() < 10 && strtmp.at(4) >= '0' && strtmp.at(4) <= '9'){
+		output << strtmp << ",";
+		for (a = 0; a < size; a++){
+			output << M[a+c*size];
+			if(a != size-1) output << ",";
 		}
-		if (!strcmp(st1, "EXIT")) break;
-		cn = 0;
-		b = 0;
-		c = 0;
-		while (1) {
-			st[cn][b] = st1[c];
-			b++;
-			c++;
-			st[cn][b] = 0;
-			if (st1[c] == 0) break;
-			if (st1[c] == ' ') {
-				cn++;
-				b = 0;
-				c++;
-			}
-		}
-		cn++;
-		for (a = 0; a < cn; a++) {
-			for (b = 0; b < words; b++) if (!strcmp(&vocab[b * max_w], st[a])) break;
-			if (b == words) b = -1;
-			bi[a] = b;
-			printf("\nWord: %s  Position in vocabulary: %lld\n", st[a], bi[a]);
-			if (b == -1) {
-				printf("Out of dictionary word!\n");
-				break;
-			}
-		}
-		if (b == -1) continue;
-		printf("\n                                              Word       Cosine distance\n------------------------------------------------------------------------\n");
-		for (a = 0; a < size; a++) vec[a] = 0;
-		for (b = 0; b < cn; b++) {
-			if (bi[b] == -1) continue;
-			for (a = 0; a < size; a++) vec[a] += M[a + bi[b] * size];
-		}
-		len = 0;
-		for (a = 0; a < size; a++) len += vec[a] * vec[a];
-		len = sqrt(len);
-		for (a = 0; a < size; a++) vec[a] /= len;
-		for (a = 0; a < N; a++) bestd[a] = 0;
-		for (a = 0; a < N; a++) bestw[a][0] = 0;
-		for (c = 0; c < words; c++) {
-			a = 0;
-			for (b = 0; b < cn; b++) if (bi[b] == c) a = 1;
-			if (a == 1) continue;
-			dist = 0;
-			for (a = 0; a < size; a++) dist += vec[a] * M[a + c * size];
-			for (a = 0; a < N; a++) {
-				if (dist > bestd[a]) {
-					for (d = N - 1; d > a; d--) {
-						bestd[d] = bestd[d - 1];
-						strcpy(bestw[d], bestw[d - 1]);
-					}
-					bestd[a] = dist;
-					strcpy(bestw[a], &vocab[c * max_w]);
-					break;
-				}
-			}
-		}
-		for (a = 0; a < N; a++) printf("%50s\t\t%f\n", bestw[a], bestd[a]);
+		output << "\n";
+//		}
+
 	}
+	output.close();
+	printf("Finish embedded word output\n");
+	// End output node representations
+//	while (1) {
+//		for (a = 0; a < N; a++) bestd[a] = 0;
+//		for (a = 0; a < N; a++) bestw[a][0] = 0;
+//		printf("Enter word or sentence (EXIT to break): ");
+//		a = 0;
+//		while (1) {
+//			st1[a] = fgetc(stdin);
+//			if ((st1[a] == '\n') || (a >= max_size - 1)) {
+//				st1[a] = 0;
+//				break;
+//			}
+//			a++;
+//		}
+//		if (!strcmp(st1, "EXIT")) break;
+//		cn = 0;
+//		b = 0;
+//		c = 0;
+//		while (1) {
+//			st[cn][b] = st1[c];
+//			b++;
+//			c++;
+//			st[cn][b] = 0;
+//			if (st1[c] == 0) break;
+//			if (st1[c] == ' ') {
+//				cn++;
+//				b = 0;
+//				c++;
+//			}
+//		}
+//		cn++;
+//		for (a = 0; a < cn; a++) {
+//			for (b = 0; b < words; b++) if (!strcmp(&vocab[b * max_w], st[a])) break;
+//			if (b == words) b = -1;
+//			bi[a] = b;
+//			printf("\nWord: %s  Position in vocabulary: %lld\n", st[a], bi[a]);
+//			if (b == -1) {
+//				printf("Out of dictionary word!\n");
+//				break;
+//			}
+//		}
+//		if (b == -1) continue;
+//		printf("\n                                              Word       Cosine distance\n------------------------------------------------------------------------\n");
+//		for (a = 0; a < size; a++) vec[a] = 0;
+//		for (b = 0; b < cn; b++) {
+//			if (bi[b] == -1) continue;
+//			for (a = 0; a < size; a++) vec[a] += M[a + bi[b] * size];
+//		}
+//		len = 0;
+//		for (a = 0; a < size; a++) len += vec[a] * vec[a];
+//		len = sqrt(len);
+//		for (a = 0; a < size; a++) vec[a] /= len;
+//		for (a = 0; a < N; a++) bestd[a] = 0;
+//		for (a = 0; a < N; a++) bestw[a][0] = 0;
+//
+//		for (c = 0; c < words; c++) {
+//			// The following lines are for testing
+//
+//			// Testing ended
+//			a = 0;
+//			for (b = 0; b < cn; b++) if (bi[b] == c) a = 1;
+//			if (a == 1) continue;
+//			dist = 0;
+//			for (a = 0; a < size; a++) dist += vec[a] * M[a + c * size];
+//			for (a = 0; a < N; a++) {
+//				if (dist > bestd[a]) {
+//					for (d = N - 1; d > a; d--) {
+//						bestd[d] = bestd[d - 1];
+//						strcpy(bestw[d], bestw[d - 1]);
+//					}
+//					bestd[a] = dist;
+//					strcpy(bestw[a], &vocab[c * max_w]);
+//					break;
+//				}
+//			}
+//		}
+//		for (a = 0; a < N; a++) printf("%50s\t\t%f\n", bestw[a], bestd[a]);
+//	}
 	return 0;
 }
